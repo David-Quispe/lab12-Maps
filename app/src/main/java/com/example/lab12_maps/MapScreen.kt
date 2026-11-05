@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -18,6 +19,8 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.Polygon
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 
@@ -50,6 +53,43 @@ fun MapScreen() {
         LatLng(-16.3524187, -71.5675994) // Zamacola
     )
 
+    // Polígonos
+    val mallAventuraPolygon = listOf(
+        LatLng(-16.432292, -71.509145),
+        LatLng(-16.432757, -71.509626),
+        LatLng(-16.433013, -71.509310),
+        LatLng(-16.432566, -71.508853)
+    )
+
+    val parqueLambramaniPolygon = listOf(
+        LatLng(-16.422704, -71.530830),
+        LatLng(-16.422920, -71.531340),
+        LatLng(-16.423264, -71.531110),
+        LatLng(-16.423050, -71.530600)
+    )
+
+    val plazaDeArmasPolygon = listOf(
+        LatLng(-16.398866, -71.536961),
+        LatLng(-16.398744, -71.536529),
+        LatLng(-16.399178, -71.536289),
+        LatLng(-16.399299, -71.536721)
+    )
+
+    // Polilíneas
+    // Ruta entre los tres lugares con polígono
+    val rutaCentroPolyline = listOf(
+        LatLng(-16.399030, -71.536625), // Plaza de Armas
+        LatLng(-16.422980, -71.530970), // Parque Lambramani
+        LatLng(-16.432660, -71.509240)  // Mall Aventura
+    )
+
+    // Recorrido por los puntos de interés
+    val recorridoPolyline = listOf(
+        LatLng(-16.433415, -71.5442652), // JLByR
+        LatLng(-16.4205151, -71.4945209), // Paucarpata
+        LatLng(-16.3524187, -71.5675994)  // Zamacola
+    )
+
     // Mover la cámara a Yura con animación de 3 segundos
     LaunchedEffect(Unit) {
         cameraPositionState.animate(
@@ -79,6 +119,41 @@ fun MapScreen() {
                     snippet = "Punto de interés"
                 )
             }
+
+            // Polígonos: Plaza de Armas, Parque Lambramani y Mall Aventura
+            Polygon(
+                points = plazaDeArmasPolygon,
+                strokeColor = Color.Red,
+                fillColor = Color.Blue.copy(alpha = 0.4f),
+                strokeWidth = 5f
+            )
+            Polygon(
+                points = parqueLambramaniPolygon,
+                strokeColor = Color.Red,
+                fillColor = Color.Blue.copy(alpha = 0.4f),
+                strokeWidth = 5f
+            )
+            Polygon(
+                points = mallAventuraPolygon,
+                strokeColor = Color.Red,
+                fillColor = Color.Blue.copy(alpha = 0.4f),
+                strokeWidth = 5f
+            )
+
+            // Polilínea 1: ruta entre Plaza de Armas, Lambramani y Mall Aventura
+            Polyline(
+                points = rutaCentroPolyline,
+                color = Color.Green,
+                width = 8f
+            )
+
+            // Polilínea 2: recorrido por JLByR, Paucarpata y Zamacola
+            Polyline(
+                points = recorridoPolyline,
+                color = Color.Magenta,
+                width = 6f,
+                geodesic = true
+            )
         }
     }
 }
