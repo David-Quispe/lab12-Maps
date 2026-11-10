@@ -1,18 +1,32 @@
 package com.example.lab12_maps
 
+import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,11 +42,14 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
+import kotlinx.coroutines.launch
 
 // Convierte un drawable (vector o imagen) en un icono para el marcador
 fun bitmapDescriptorFromDrawable(
@@ -58,6 +75,40 @@ fun MapScreen() {
 
     // Ejercicio 1: tipo de mapa seleccionado (empieza en Normal)
     var tipoMapa by remember { mutableStateOf(MapType.NORMAL) }
+
+    // Ejercicio 2: permiso y ubicación actual del usuario
+    val scope = rememberCoroutineScope()
+    var permisoUbicacion by remember { mutableStateOf(tienePermisoUbicacion(context)) }
+    var miUbicacion by remember { mutableStateOf<LatLng?>(null) }
+
+    // Pide la ubicación al GPS y mueve la cámara hacia ella
+    val irAMiUbicacion = {
+        obtenerUbicacionActual(context) { latLng ->
+            if (latLng == null) {
+                Toast.makeText(context, "No se pudo obtener tu ubicación, revisa que el GPS esté activo", Toast.LENGTH_LONG).show()
+            } else {
+                miUbicacion = latLng
+                scope.launch {
+                    cameraPositionState.animate(
+                        update = CameraUpdateFactory.newLatLngZoom(latLng, 16f),
+                        durationMs = 1500
+                    )
+                }
+            }
+        }
+    }
+
+    // Lanzador que muestra el diálogo de permisos de Android
+    val permisoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { resultado ->
+        permisoUbicacion = resultado.values.any { it }
+        if (permisoUbicacion) {
+            irAMiUbicacion()
+        } else {
+            Toast.makeText(context, "Sin permiso no puedo mostrar tu ubicación", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Lista de puntos de interés
     val locations = listOf(
@@ -116,8 +167,24 @@ fun MapScreen() {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            properties = MapProperties(mapType = tipoMapa)
+            properties = MapProperties(
+                mapType = tipoMapa,
+                isMyLocationEnabled = permisoUbicacion // punto azul de Google Maps
+            ),
+            uiSettings = MapUiSettings(myLocationButtonEnabled = false) // uso mi propio botón
         ) {
+            // Marcador en la ubicación actual del usuario
+            miUbicacion?.let { posicion ->
+                key(posicion) {
+                    Marker(
+                        state = MarkerState(position = posicion),
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                        title = "Estoy aquí",
+                        snippet = "%.5f, %.5f".format(posicion.latitude, posicion.longitude)
+                    )
+                }
+            }
+
             // Marcador personalizado en Arequipa, Perú (icono de montaña)
             Marker(
                 state = rememberMarkerState(position = ArequipaLocation),
@@ -179,5 +246,45 @@ fun MapScreen() {
                 .statusBarsPadding()
                 .padding(top = 8.dp)
         )
+
+        // Coordenadas actuales y botón "Mi ubicación" en la esquina inferior
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            miUbicacion?.let { posicion ->
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    shadowElevation = 4.dp
+                ) {
+                    Text(
+                        text = "Lat: %.5f\nLng: %.5f".format(posicion.latitude, posicion.longitude),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            ExtendedFloatingActionButton(
+                onClick = {
+                    if (permisoUbicacion) {
+                        irAMiUbicacion()
+                    } else {
+                        permisoLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                }
+            ) {
+                Text("📍 Mi ubicación")
+            }
+        }
     }
 }
