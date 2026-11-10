@@ -6,11 +6,19 @@ import android.graphics.Canvas
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -18,6 +26,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.Polyline
@@ -45,6 +55,9 @@ fun MapScreen() {
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(ArequipaLocation, 12f)
     }
+
+    // Ejercicio 1: tipo de mapa seleccionado (empieza en Normal)
+    var tipoMapa by remember { mutableStateOf(MapType.NORMAL) }
 
     // Lista de puntos de interés
     val locations = listOf(
@@ -102,7 +115,8 @@ fun MapScreen() {
         // Añadir GoogleMap al layout
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(mapType = tipoMapa)
         ) {
             // Marcador personalizado en Arequipa, Perú (icono de montaña)
             Marker(
@@ -155,5 +169,15 @@ fun MapScreen() {
                 geodesic = true
             )
         }
+
+        // Selector del tipo de mapa encima del mapa
+        MapTypeSelector(
+            tipoActual = tipoMapa,
+            onTipoSeleccionado = { tipoMapa = it },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 8.dp)
+        )
     }
 }
